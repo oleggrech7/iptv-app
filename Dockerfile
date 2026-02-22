@@ -10,27 +10,25 @@
 
 FROM ubuntu:24.04
 
-# Install Node.js, FFmpeg, and hardware acceleration drivers
+# Install Bun, FFmpeg, and hardware acceleration drivers
 ARG TARGETARCH
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
-    gnupg \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    unzip \
+    && curl -fsSL https://bun.sh/install | bash \
     && if [ "$TARGETARCH" = "amd64" ]; then \
         DRIVERS="mesa-va-drivers intel-media-va-driver vainfo"; \
     else \
         DRIVERS=""; \
     fi \
     && apt-get update && apt-get install -y --no-install-recommends \
-    nodejs \
     ffmpeg \
-    python3 \
-    make \
-    g++ \
     $DRIVERS \
     && rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/root/.bun/bin:$PATH"
 
 # Verify FFmpeg installed
 RUN ffmpeg -version && ffmpeg -encoders 2>/dev/null | grep -E "vaapi|nvenc|qsv|libx264" | head -10
@@ -38,10 +36,10 @@ RUN ffmpeg -version && ffmpeg -encoders 2>/dev/null | grep -E "vaapi|nvenc|qsv|l
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json bun.lock ./
 
-# Install dependencies (better-sqlite3 will build from source using g++ installed above)
-RUN npm ci --only=production
+# Install dependencies
+RUN bun install --frozen-lockfile
 
 # Copy application files
 COPY . .
@@ -53,4 +51,4 @@ RUN mkdir -p /app/data /app/transcode-cache && chmod 777 /app/transcode-cache
 EXPOSE 3000
 
 # Start server
-CMD ["node", "server/index.js"]
+CMD ["bun", "server/index.js"]

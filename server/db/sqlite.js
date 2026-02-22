@@ -1,4 +1,4 @@
-const Database = require('better-sqlite3');
+const { Database } = require('bun:sqlite');
 const path = require('path');
 const fs = require('fs');
 
@@ -15,10 +15,10 @@ let db;
 function getDb() {
     if (!db) {
         console.log('[SQLite] Opening database at', dbPath);
-        db = new Database(dbPath);
-        // Optimize performance
-        db.pragma('journal_mode = WAL');
-        db.pragma('synchronous = NORMAL');
+        db = new Database(dbPath, { create: true });
+        // Optimize performance (Bun uses run() for PRAGMA)
+        db.run('PRAGMA journal_mode = WAL;');
+        db.run('PRAGMA synchronous = NORMAL;');
         initSchema();
     }
     return db;
